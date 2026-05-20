@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Movie, TrackedItem, ApiSettings, MOCK_MOVIES, searchOmdb, searchTmdb } from '@/lib/movie-db';
+import { Movie, TrackedItem, ApiSettings, MOCK_MOVIES, searchOmdb, searchTmdb, getTrendingTmdb } from '@/lib/movie-db';
 import { toast } from 'sonner';
 
 export function useMovies() {
@@ -10,6 +10,8 @@ export function useMovies() {
   const [mounted, setMounted] = useState(false);
   const [searchResult, setSearchResult] = useState<Movie[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [trendingMovies, setTrendingMovies] = useState<Movie[]>([]);
+  const [isLoadingTrending, setIsLoadingTrending] = useState(false);
 
   // Initialize and load from local storage
   useEffect(() => {
@@ -50,6 +52,27 @@ export function useMovies() {
     }
     toast.success("API settings saved successfully.");
   };
+
+  const fetchTrending = useCallback(async () => {
+    if (!apiSettings.tmdbApiKey) {
+      setTrendingMovies([]);
+      return;
+    }
+    setIsLoadingTrending(true);
+    const results = await getTrendingTmdb(apiSettings.tmdbApiKey);
+    setTrendingMovies(results);
+    setIsLoadingTrending(false);
+  }, [apiSettings.tmdbApiKey]);
+
+  useEffect(() => {
+    if (mounted) {
+      if (apiSettings.tmdbApiKey) {
+        fetchTrending();
+      } else {
+        setTrendingMovies([]);
+      }
+    }
+  }, [apiSettings.tmdbApiKey, mounted, fetchTrending]);
 
   // Add a movie to tracker
   const addMovie = useCallback((movie: Movie, status: 'watchlist' | 'watching' | 'watched') => {
@@ -238,6 +261,8 @@ export function useMovies() {
     apiSettings,
     searchResult,
     isSearching,
+    trendingMovies,
+    isLoadingTrending,
     saveApiSettings,
     addMovie,
     updateTrackedItem,

@@ -28,6 +28,7 @@ import {
   FolderHeart,
   Loader2,
   X,
+  Flame,
 } from 'lucide-react';
 
 export default function Home() {
@@ -37,6 +38,8 @@ export default function Home() {
     apiSettings,
     searchResult,
     isSearching,
+    trendingMovies,
+    isLoadingTrending,
     saveApiSettings,
     addMovie,
     updateTrackedItem,
@@ -417,8 +420,36 @@ export default function Home() {
                   Could not find any items matching &ldquo;{searchQuery}&rdquo;.
                 </p>
               </div>
+            ) : isLoadingTrending ? (
+              <div className="flex-1 flex flex-col items-center justify-center py-24 text-zinc-500">
+                <Loader2 className="w-6 h-6 animate-spin text-zinc-700 mb-2" />
+                <span className="text-xs">Loading trending movies...</span>
+              </div>
+            ) : apiSettings.tmdbApiKey && trendingMovies.length > 0 ? (
+              // Live TMDB Trending Movies
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-zinc-900 pb-2">
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Flame className="w-3.5 h-3.5 text-amber-500 animate-pulse" /> Trending Movies this Week
+                  </span>
+                  <span className="text-[10px] text-zinc-500 italic">
+                    Live TMDB Feed
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                  {trendingMovies.map((movie) => (
+                    <MovieCard
+                      key={movie.id}
+                      movie={movie}
+                      item={trackedItems.find((i) => i.id === movie.id)}
+                      onAdd={addMovie}
+                      onEdit={handleEditClick}
+                    />
+                  ))}
+                </div>
+              </div>
             ) : (
-              // Default suggestion library
+              // Default suggestion library (fallback or offline)
               <div className="space-y-4">
                 <div className="flex items-center justify-between border-b border-zinc-900 pb-2">
                   <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
