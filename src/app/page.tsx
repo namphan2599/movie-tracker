@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useMovies } from '@/hooks/use-movies';
 import { MovieCard } from '@/components/movie-card';
 import { MovieDialog } from '@/components/movie-dialog';
 import { AnalyticsDashboard } from '@/components/analytics-dashboard';
 import { SettingsPanel } from '@/components/settings-panel';
-import { Movie, TrackedItem } from '@/lib/movie-db';
+import { Movie, TrackedItem, DISCOVER_CATEGORIES } from '@/lib/movie-db';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
@@ -29,9 +30,107 @@ import {
   Loader2,
   X,
   Flame,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
+function CategoryRow({
+  title,
+  movies,
+  trackedItems,
+  onAdd,
+  onEdit,
+  subtitle,
+  onMore,
+}: {
+  title: string;
+  movies: Movie[];
+  trackedItems: TrackedItem[];
+  onAdd?: (movie: Movie, status: 'watchlist' | 'watching' | 'watched') => void;
+  onEdit?: (item: TrackedItem) => void;
+  subtitle?: string;
+  onMore?: () => void;
+}) {
+  const rowRef = React.useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (rowRef.current) {
+      const { scrollLeft, clientWidth } = rowRef.current;
+      const scrollAmount = clientWidth * 0.75;
+      rowRef.current.scrollTo({
+        left: direction === 'left' ? scrollLeft - scrollAmount : scrollLeft + scrollAmount,
+        behavior: 'smooth',
+      });
+    }
+  };
+
+  if (!movies || movies.length === 0) return null;
+
+  return (
+    <div className="space-y-3 relative group/row">
+      <div className="flex items-center justify-between border-b border-zinc-900 pb-2">
+        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
+          {title}
+        </span>
+        <div className="flex items-center gap-3">
+          {subtitle && (
+            <span className="text-[10px] text-zinc-600 italic font-mono hidden sm:inline">
+              {subtitle}
+            </span>
+          )}
+          {onMore && (
+            <button
+              onClick={onMore}
+              className="text-[10px] font-semibold font-mono tracking-wider uppercase text-indigo-400 hover:text-indigo-300 transition cursor-pointer flex items-center gap-1"
+            >
+              More &rarr;
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="relative px-1">
+        {/* Left Arrow */}
+        <button
+          onClick={() => scroll('left')}
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-1.5 rounded-full bg-zinc-950/80 border border-zinc-800 text-zinc-400 hover:text-zinc-150 hover:bg-zinc-900/90 transition-all opacity-0 group-hover/row:opacity-100 -left-2 sm:-left-4 focus:opacity-100 shadow-md backdrop-blur-sm cursor-pointer"
+          title="Scroll Left"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+
+        {/* Right Arrow */}
+        <button
+          onClick={() => scroll('right')}
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-1.5 rounded-full bg-zinc-950/80 border border-zinc-800 text-zinc-400 hover:text-zinc-150 hover:bg-zinc-900/90 transition-all opacity-0 group-hover/row:opacity-100 -right-2 sm:-right-4 focus:opacity-100 shadow-md backdrop-blur-sm cursor-pointer"
+          title="Scroll Right"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+
+        {/* Row Scroll Container */}
+        <div
+          ref={rowRef}
+          className="flex gap-4 overflow-x-auto py-2 scroll-smooth no-scrollbar"
+        >
+          {movies.map((movie) => (
+            <div key={movie.id} className="w-[155px] sm:w-[170px] shrink-0">
+              <MovieCard
+                movie={movie}
+                item={trackedItems.find((i) => i.id === movie.id)}
+                onAdd={onAdd}
+                onEdit={onEdit}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
+  const router = useRouter();
   const {
     mounted,
     trackedItems,
@@ -40,6 +139,8 @@ export default function Home() {
     isSearching,
     trendingMovies,
     isLoadingTrending,
+    categoryMovies,
+    isLoadingCategories,
     saveApiSettings,
     addMovie,
     updateTrackedItem,
@@ -67,6 +168,17 @@ export default function Home() {
   const [libGenre, setLibGenre] = useState<string>('all');
   const [libSort, setLibSort] = useState<string>('added-desc');
   const [showFilters, setShowFilters] = useState(false);
+
+  // Restore active tab from query params if specified (e.g. ?tab=discover)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      if (tab && ['library', 'discover', 'analytics', 'settings'].includes(tab)) {
+        setActiveTab(tab as any);
+      }
+    }
+  }, []);
 
   if (!mounted) {
     return (
@@ -420,58 +532,55 @@ export default function Home() {
                   Could not find any items matching &ldquo;{searchQuery}&rdquo;.
                 </p>
               </div>
-            ) : isLoadingTrending ? (
+            ) : (isLoadingTrending || isLoadingCategories) ? (
               <div className="flex-1 flex flex-col items-center justify-center py-24 text-zinc-500">
                 <Loader2 className="w-6 h-6 animate-spin text-zinc-700 mb-2" />
-                <span className="text-xs">Loading trending movies...</span>
-              </div>
-            ) : apiSettings.tmdbApiKey && trendingMovies.length > 0 ? (
-              // Live TMDB Trending Movies
-              <div className="space-y-4">
-                <div className="flex items-center justify-between border-b border-zinc-900 pb-2">
-                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <Flame className="w-3.5 h-3.5 text-amber-500 animate-pulse" /> Trending Movies this Week
-                  </span>
-                  <span className="text-[10px] text-zinc-500 italic">
-                    Live TMDB Feed
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                  {trendingMovies.map((movie) => (
-                    <MovieCard
-                      key={movie.id}
-                      movie={movie}
-                      item={trackedItems.find((i) => i.id === movie.id)}
-                      onAdd={addMovie}
-                      onEdit={handleEditClick}
-                    />
-                  ))}
-                </div>
+                <span className="text-xs">Loading discover feed...</span>
               </div>
             ) : (
-              // Default suggestion library (fallback or offline)
-              <div className="space-y-4">
-                <div className="flex items-center justify-between border-b border-zinc-900 pb-2">
-                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <Compass className="w-3.5 h-3.5" /> Suggested Titles
-                  </span>
-                  {!apiSettings.tmdbApiKey && !apiSettings.omdbApiKey && (
-                    <span className="text-[10px] text-zinc-500 italic">
-                      Offline Mode (Config API Key in Settings for live lookup)
-                    </span>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                  {require('@/lib/movie-db').MOCK_MOVIES.slice(0, 10).map((movie: Movie) => (
-                    <MovieCard
-                      key={movie.id}
-                      movie={movie}
-                      item={trackedItems.find((i) => i.id === movie.id)}
+              <div className="space-y-8 pb-10">
+                {/* 1. Main Row: Trending / Suggested */}
+                {apiSettings.tmdbApiKey && trendingMovies.length > 0 ? (
+                  <CategoryRow
+                    title="Trending Movies this Week"
+                    subtitle="Live TMDB Feed"
+                    movies={trendingMovies}
+                    trackedItems={trackedItems}
+                    onAdd={addMovie}
+                    onEdit={handleEditClick}
+                  />
+                ) : (
+                  <CategoryRow
+                    title="Suggested Titles"
+                    subtitle="Offline Mode"
+                    movies={require('@/lib/movie-db').MOCK_MOVIES.slice(0, 10)}
+                    trackedItems={trackedItems}
+                    onAdd={addMovie}
+                    onEdit={handleEditClick}
+                  />
+                )}
+
+                {/* 2. Categorized Rows */}
+                {DISCOVER_CATEGORIES.map((cat) => {
+                  const movies = apiSettings.tmdbApiKey
+                    ? (categoryMovies[cat.id] || [])
+                    : require('@/lib/movie-db').MOCK_MOVIES.filter((movie: Movie) =>
+                        movie.genre.includes(cat.mockName)
+                      );
+
+                  return (
+                    <CategoryRow
+                      key={cat.id}
+                      title={`Popular in ${cat.name}`}
+                      subtitle={apiSettings.tmdbApiKey ? "Live TMDB Feed" : "Curated Collection"}
+                      movies={movies}
+                      trackedItems={trackedItems}
                       onAdd={addMovie}
                       onEdit={handleEditClick}
+                      onMore={() => router.push(`/category/${cat.id}`)}
                     />
-                  ))}
-                </div>
+                  );
+                })}
               </div>
             )}
           </motion.div>

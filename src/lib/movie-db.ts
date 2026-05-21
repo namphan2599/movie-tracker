@@ -371,3 +371,103 @@ export async function getTrendingTmdb(apiKey: string): Promise<Movie[]> {
   }
 }
 
+// Discover Categories with TMDB Genre Mappings
+export const DISCOVER_CATEGORIES = [
+  { id: 'action', name: 'Action', tmdbGenreId: 28, mockName: 'Action' },
+  { id: 'comedy', name: 'Comedy', tmdbGenreId: 35, mockName: 'Comedy' },
+  { id: 'drama', name: 'Drama', tmdbGenreId: 18, mockName: 'Drama' },
+  { id: 'scifi', name: 'Sci-Fi', tmdbGenreId: 878, mockName: 'Sci-Fi' },
+  { id: 'animation', name: 'Animation', tmdbGenreId: 16, mockName: 'Animation' }
+];
+
+// TMDB Discover by Genre Helper
+export async function getMoviesByGenreTmdb(apiKey: string, genreId: number): Promise<Movie[]> {
+  try {
+    const res = await fetch(
+      `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&with_genres=${genreId}&sort_by=popularity.desc`
+    );
+    const data = await res.json();
+    if (data.results) {
+      return data.results.slice(0, 10).map((item: any) => {
+        const genreMap: Record<number, string> = {
+          28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy", 80: "Crime",
+          99: "Documentary", 18: "Drama", 10751: "Family", 14: "Fantasy", 36: "History",
+          27: "Horror", 10402: "Music", 9648: "Mystery", 10749: "Romance", 878: "Sci-Fi",
+          10770: "TV Movie", 53: "Thriller", 10752: "War", 37: "Western"
+        };
+        const genres = (item.genre_ids || []).map((id: number) => genreMap[id] || "Drama").slice(0, 3);
+        if (genres.length === 0) genres.push("Movie");
+
+        return {
+          id: `tmdb-${item.id}`,
+          title: item.title,
+          type: 'movie',
+          year: (item.release_date || '').split('-')[0] || 'N/A',
+          poster: item.poster_path
+            ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
+            : 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=500&auto=format&fit=crop',
+          genre: genres,
+          director: 'Various Directors',
+          actors: 'Cast/Crew Details',
+          imdbRating: item.vote_average ? item.vote_average.toFixed(1) : 'N/A',
+          plot: item.overview || 'No plot details available.'
+        };
+      });
+    }
+    return [];
+  } catch (error) {
+    console.error(`TMDB Genre ${genreId} API Error:`, error);
+    return [];
+  }
+}
+
+// TMDB Discover by Genre Paginated Helper
+export async function getMoviesByGenreTmdbPaginated(
+  apiKey: string,
+  genreId: number,
+  page: number = 1
+): Promise<{ movies: Movie[]; totalPages: number }> {
+  try {
+    const res = await fetch(
+      `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&with_genres=${genreId}&sort_by=popularity.desc&page=${page}`
+    );
+    const data = await res.json();
+    if (data.results) {
+      const movies = data.results.map((item: any) => {
+        const genreMap: Record<number, string> = {
+          28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy", 80: "Crime",
+          99: "Documentary", 18: "Drama", 10751: "Family", 14: "Fantasy", 36: "History",
+          27: "Horror", 10402: "Music", 9648: "Mystery", 10749: "Romance", 878: "Sci-Fi",
+          10770: "TV Movie", 53: "Thriller", 10752: "War", 37: "Western"
+        };
+        const genres = (item.genre_ids || []).map((id: number) => genreMap[id] || "Drama").slice(0, 3);
+        if (genres.length === 0) genres.push("Movie");
+
+        return {
+          id: `tmdb-${item.id}`,
+          title: item.title,
+          type: 'movie',
+          year: (item.release_date || '').split('-')[0] || 'N/A',
+          poster: item.poster_path
+            ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
+            : 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=500&auto=format&fit=crop',
+          genre: genres,
+          director: 'Various Directors',
+          actors: 'Cast/Crew Details',
+          imdbRating: item.vote_average ? item.vote_average.toFixed(1) : 'N/A',
+          plot: item.overview || 'No plot details available.'
+        };
+      });
+      return {
+        movies,
+        totalPages: Math.min(data.total_pages || 1, 500) // TMDB maximum accessible page count is 500
+      };
+    }
+    return { movies: [], totalPages: 1 };
+  } catch (error) {
+    console.error(`TMDB Genre ${genreId} Paginated API Error:`, error);
+    return { movies: [], totalPages: 1 };
+  }
+}
+
+

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Movie, TrackedItem, ApiSettings, MOCK_MOVIES, searchOmdb, searchTmdb, getTrendingTmdb } from '@/lib/movie-db';
+import { Movie, TrackedItem, ApiSettings, MOCK_MOVIES, searchOmdb, searchTmdb, getTrendingTmdb, DISCOVER_CATEGORIES, getMoviesByGenreTmdb } from '@/lib/movie-db';
 import { toast } from 'sonner';
 
 export function useMovies() {
@@ -12,6 +12,8 @@ export function useMovies() {
   const [isSearching, setIsSearching] = useState(false);
   const [trendingMovies, setTrendingMovies] = useState<Movie[]>([]);
   const [isLoadingTrending, setIsLoadingTrending] = useState(false);
+  const [categoryMovies, setCategoryMovies] = useState<Record<string, Movie[]>>({});
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
 
   // Initialize and load from local storage
   useEffect(() => {
@@ -64,15 +66,39 @@ export function useMovies() {
     setIsLoadingTrending(false);
   }, [apiSettings.tmdbApiKey]);
 
+  const fetchCategories = useCallback(async () => {
+    if (!apiSettings.tmdbApiKey) {
+      setCategoryMovies({});
+      return;
+    }
+    setIsLoadingCategories(true);
+    try {
+      const results: Record<string, Movie[]> = {};
+      await Promise.all(
+        DISCOVER_CATEGORIES.map(async (cat) => {
+          const movies = await getMoviesByGenreTmdb(apiSettings.tmdbApiKey!, cat.tmdbGenreId);
+          results[cat.id] = movies;
+        })
+      );
+      setCategoryMovies(results);
+    } catch (e) {
+      console.error("Failed to fetch category movies", e);
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  }, [apiSettings.tmdbApiKey]);
+
   useEffect(() => {
     if (mounted) {
       if (apiSettings.tmdbApiKey) {
         fetchTrending();
+        fetchCategories();
       } else {
         setTrendingMovies([]);
+        setCategoryMovies({});
       }
     }
-  }, [apiSettings.tmdbApiKey, mounted, fetchTrending]);
+  }, [apiSettings.tmdbApiKey, mounted, fetchTrending, fetchCategories]);
 
   // Add a movie to tracker
   const addMovie = useCallback((movie: Movie, status: 'watchlist' | 'watching' | 'watched') => {
@@ -263,6 +289,8 @@ export function useMovies() {
     isSearching,
     trendingMovies,
     isLoadingTrending,
+    categoryMovies,
+    isLoadingCategories,
     saveApiSettings,
     addMovie,
     updateTrackedItem,
