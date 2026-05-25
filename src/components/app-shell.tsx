@@ -1,0 +1,60 @@
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { BarChart3, Compass, Film, FolderHeart, Settings } from 'lucide-react';
+
+const NAV_ITEMS = [
+  { href: '/library', label: 'Library', icon: FolderHeart },
+  { href: '/discover', label: 'Discover', icon: Compass },
+  { href: '/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/settings', label: 'Settings', icon: Settings },
+] as const;
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
+  return (
+    <div className="flex-1 flex flex-col pb-16">
+      <header className="sticky top-0 z-40 w-full border-b border-zinc-900 bg-zinc-950/80 backdrop-blur-md">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+              <Film className="w-4.5 h-4.5 text-indigo-400" />
+            </div>
+            <span className="font-bold text-base tracking-wider text-zinc-100 font-mono">
+              CINEPHILE<span className="text-indigo-500 font-sans">/</span>
+            </span>
+          </div>
+
+          <nav className="flex items-center gap-1">
+            {NAV_ITEMS.map((item) => {
+              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const Icon = item.icon;
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold font-mono tracking-wide transition flex items-center gap-1.5 ${
+                    active
+                      ? 'bg-zinc-900 text-zinc-100 border border-zinc-800'
+                      : 'text-zinc-400 hover:text-zinc-200 border border-transparent'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 pt-8 flex-1 flex flex-col">
+        {children}
+      </main>
+    </div>
+  );
+}

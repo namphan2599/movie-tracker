@@ -787,7 +787,7 @@ export default function MovieDetailPage() {
                             </span>
                           )}
                         </div>
-                        <p className="text-[12px] text-zinc-450 leading-relaxed font-sans line-clamp-4 hover:line-clamp-none transition-all duration-300">
+                        <p className="text-[12px] text-zinc-450 leading-relaxed font-sans transition-all duration-300">
                           {rev.content}
                         </p>
                       </div>

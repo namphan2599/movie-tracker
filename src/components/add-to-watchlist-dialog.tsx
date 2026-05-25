@@ -63,7 +63,7 @@ export function AddToWatchlistDialog({ isOpen, onClose, movie }: AddToWatchlistD
               </SelectTrigger>
               <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200">
                 {collections.map((col) => (
-                  <SelectItem key={col.id} value={col.id} className="hover:bg-zinc-800 focus:bg-zinc-800 cursor-pointer">
+                  <SelectItem key={col.id} value={col.name} className="hover:bg-zinc-800 focus:bg-zinc-800 cursor-pointer">
                     {col.name}
                   </SelectItem>
                 ))}

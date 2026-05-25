@@ -97,7 +97,10 @@ export function MovieCard({ item, movie, onAdd, onEdit, onAddToWatchlist }: Movi
     <Card className="group relative overflow-hidden bg-zinc-950 border border-zinc-900 rounded-xl transition-all duration-300 hover:border-zinc-800 hover:shadow-xl hover:shadow-black/50">
       {/* Poster area */}
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-zinc-900">
-        <Link href={`/movie/${currentMovie.id}`} className="block h-full w-full cursor-pointer">
+        <Link
+          href={`/movie/${currentMovie.id}`}
+          className="block h-full w-full cursor-pointer"
+        >
           <img
             src={currentMovie.poster}
             alt={currentMovie.title}
@@ -108,27 +111,14 @@ export function MovieCard({ item, movie, onAdd, onEdit, onAddToWatchlist }: Movi
 
         {/* Backdrop overlay for tracked status or hover actions */}
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-          {!isTracked && onAdd && (
+          {!isTracked && onAddToWatchlist && (
             <div className="flex flex-col gap-1.5 animate-in fade-in-50 slide-in-from-bottom-5 duration-200">
-              <p className="text-xs font-semibold text-center mb-1 text-zinc-300">Add to library as:</p>
-              <div className="grid grid-cols-3 gap-1">
+              <div className="grid grid-rows-3 gap-1">
                 <button
-                  onClick={() => onAdd(currentMovie, 'watchlist')}
-                  className="px-2 py-1.5 rounded bg-zinc-900/90 text-[10px] text-zinc-200 font-medium hover:bg-amber-600 hover:text-white transition"
+                  onClick={() => onAddToWatchlist(currentMovie)}
+                  className="py-1.5 rounded bg-zinc-900/90 text-[10px] text-zinc-200 font-medium hover:bg-amber-600 hover:text-white transition"
                 >
-                  Watchlist
-                </button>
-                <button
-                  onClick={() => onAdd(currentMovie, 'watching')}
-                  className="px-2 py-1.5 rounded bg-zinc-900/90 text-[10px] text-zinc-200 font-medium hover:bg-indigo-600 hover:text-white transition"
-                >
-                  Watching
-                </button>
-                <button
-                  onClick={() => onAdd(currentMovie, 'watched')}
-                  className="px-2 py-1.5 rounded bg-zinc-900/90 text-[10px] text-zinc-200 font-medium hover:bg-emerald-600 hover:text-white transition"
-                >
-                  Watched
+                  Add to Watchlist
                 </button>
               </div>
             </div>
@@ -147,7 +137,7 @@ export function MovieCard({ item, movie, onAdd, onEdit, onAddToWatchlist }: Movi
 
         {/* Type Icon Tag */}
         <div className="absolute top-3 left-3 px-2 py-1 rounded bg-black/60 border border-zinc-800/80 backdrop-blur-sm text-[10px] text-zinc-300 font-medium flex items-center gap-1">
-          {currentMovie.type === 'series' ? (
+          {currentMovie.type === "series" ? (
             <>
               <Tv className="w-3 h-3 text-indigo-400" />
               <span>TV</span>
@@ -168,55 +158,30 @@ export function MovieCard({ item, movie, onAdd, onEdit, onAddToWatchlist }: Movi
         )}
       </div>
 
-        {/* Buttons */}
-        <div className="flex gap-1 mt-2">
-          {/* Watchlist button opens dialog */}
-          {onAddToWatchlist && (
-            <button
-              onClick={() => onAddToWatchlist(currentMovie)}
-              className="px-2 py-1 rounded bg-amber-600/90 text-xs text-white hover:bg-amber-500 transition"
-            >
-              Add to Watchlist
-            </button>
-          )}
-          {/* Watching */}
-          {onAdd && (
-            <button
-              onClick={() => onAdd(currentMovie, 'watching')}
-              className="px-2 py-1 rounded bg-indigo-600/90 text-xs text-white hover:bg-indigo-500 transition"
-            >
-              Watching
-            </button>
-          )}
-          {/* Watched */}
-          {onAdd && (
-            <button
-              onClick={() => onAdd(currentMovie, 'watched')}
-              className="px-2 py-1 rounded bg-emerald-600/90 text-xs text-white hover:bg-emerald-500 transition"
-            >
-              Watched
-            </button>
-          )}
-        </div>
       <CardContent className="p-4 bg-zinc-950">
         <div className="space-y-1">
           <div className="flex justify-between items-start gap-2">
             <h3 className="font-semibold text-zinc-100 text-sm line-clamp-1 group-hover:text-zinc-50 transition-colors">
-              <Link href={`/movie/${currentMovie.id}`} className="hover:underline">
+              <Link
+                href={`/movie/${currentMovie.id}`}
+                className="hover:underline"
+              >
                 {currentMovie.title}
               </Link>
             </h3>
-            <span className="text-xs text-zinc-500 font-medium shrink-0">{currentMovie.year}</span>
+            <span className="text-xs text-zinc-500 font-medium shrink-0">
+              {currentMovie.year}
+            </span>
           </div>
 
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-zinc-400 line-clamp-1">
-              {currentMovie.genre.join(', ')}
+              {currentMovie.genre.join(", ")}
             </span>
           </div>
 
           {/* User rating (only if rated) */}
-          {isTracked && item.rating > 0 && (
+          {/* {isTracked && item.rating > 0 && (
             <div className="pt-1 flex items-center justify-between">
               {renderStars(item.rating)}
               {item.customTags.length > 0 && (
@@ -225,14 +190,14 @@ export function MovieCard({ item, movie, onAdd, onEdit, onAddToWatchlist }: Movi
                 </span>
               )}
             </div>
-          )}
+          )} */}
 
           {/* User Review Note preview if exists */}
-          {isTracked && item.notes && (
+          {/* {isTracked && item.notes && (
             <p className="text-[11px] text-zinc-500 line-clamp-1 italic pt-1">
               &ldquo;{item.notes}&rdquo;
             </p>
-          )}
+          )} */}
 
           {/* Progress bar for ongoing shows/movies */}
           {getProgressInfo()}
