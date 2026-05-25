@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { ApiSettings, TrackedItem } from '@/lib/movie-db';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,14 +23,16 @@ export function SettingsPanel({
   onImport,
   onClear,
 }: SettingsPanelProps) {
-  const [tmdbKey, setTmdbKey] = useState('');
-  const [omdbKey, setOmdbKey] = useState('');
+  const [tmdbKey, setTmdbKey] = useState(settings.tmdbApiKey || '');
+  const [omdbKey, setOmdbKey] = useState(settings.omdbApiKey || '');
+  const [prevSettings, setPrevSettings] = useState(settings);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  if (settings !== prevSettings) {
+    setPrevSettings(settings);
     setTmdbKey(settings.tmdbApiKey || '');
     setOmdbKey(settings.omdbApiKey || '');
-  }, [settings]);
+  }
 
   const handleSaveKeys = () => {
     onSaveSettings({

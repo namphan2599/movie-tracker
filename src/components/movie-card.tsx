@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { Movie, TrackedItem } from '@/lib/movie-db';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,11 +11,12 @@ import { Progress } from '@/components/ui/progress';
 interface MovieCardProps {
   item?: TrackedItem; // if it's already tracked
   movie?: Movie; // if it's just a search result
-  onAdd?: (movie: Movie, status: 'watchlist' | 'watching' | 'watched') => void;
+  onAddToWatchlist?: (movie: Movie) => void; // open collection dialog
+  onAdd?: (movie: Movie, status: 'watchlist' | 'watching' | 'watched') => void; // legacy
   onEdit?: (item: TrackedItem) => void;
 }
 
-export function MovieCard({ item, movie, onAdd, onEdit }: MovieCardProps) {
+export function MovieCard({ item, movie, onAdd, onEdit, onAddToWatchlist }: MovieCardProps) {
   const currentMovie = item ? item.movie : movie;
   if (!currentMovie) return null;
 
@@ -95,12 +97,14 @@ export function MovieCard({ item, movie, onAdd, onEdit }: MovieCardProps) {
     <Card className="group relative overflow-hidden bg-zinc-950 border border-zinc-900 rounded-xl transition-all duration-300 hover:border-zinc-800 hover:shadow-xl hover:shadow-black/50">
       {/* Poster area */}
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-zinc-900">
-        <img
-          src={currentMovie.poster}
-          alt={currentMovie.title}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-          loading="lazy"
-        />
+        <Link href={`/movie/${currentMovie.id}`} className="block h-full w-full cursor-pointer">
+          <img
+            src={currentMovie.poster}
+            alt={currentMovie.title}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
+          />
+        </Link>
 
         {/* Backdrop overlay for tracked status or hover actions */}
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
@@ -164,12 +168,43 @@ export function MovieCard({ item, movie, onAdd, onEdit }: MovieCardProps) {
         )}
       </div>
 
-      {/* Info area */}
+        {/* Buttons */}
+        <div className="flex gap-1 mt-2">
+          {/* Watchlist button opens dialog */}
+          {onAddToWatchlist && (
+            <button
+              onClick={() => onAddToWatchlist(currentMovie)}
+              className="px-2 py-1 rounded bg-amber-600/90 text-xs text-white hover:bg-amber-500 transition"
+            >
+              Add to Watchlist
+            </button>
+          )}
+          {/* Watching */}
+          {onAdd && (
+            <button
+              onClick={() => onAdd(currentMovie, 'watching')}
+              className="px-2 py-1 rounded bg-indigo-600/90 text-xs text-white hover:bg-indigo-500 transition"
+            >
+              Watching
+            </button>
+          )}
+          {/* Watched */}
+          {onAdd && (
+            <button
+              onClick={() => onAdd(currentMovie, 'watched')}
+              className="px-2 py-1 rounded bg-emerald-600/90 text-xs text-white hover:bg-emerald-500 transition"
+            >
+              Watched
+            </button>
+          )}
+        </div>
       <CardContent className="p-4 bg-zinc-950">
         <div className="space-y-1">
           <div className="flex justify-between items-start gap-2">
             <h3 className="font-semibold text-zinc-100 text-sm line-clamp-1 group-hover:text-zinc-50 transition-colors">
-              {currentMovie.title}
+              <Link href={`/movie/${currentMovie.id}`} className="hover:underline">
+                {currentMovie.title}
+              </Link>
             </h3>
             <span className="text-xs text-zinc-500 font-medium shrink-0">{currentMovie.year}</span>
           </div>

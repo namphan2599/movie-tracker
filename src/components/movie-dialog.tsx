@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { TrackedItem } from '@/lib/movie-db';
 import {
   Dialog,
@@ -25,17 +25,18 @@ interface MovieDialogProps {
 }
 
 export function MovieDialog({ item, isOpen, onClose, onUpdate, onRemove }: MovieDialogProps) {
-  const [status, setStatus] = useState<'watchlist' | 'watching' | 'watched'>('watchlist');
-  const [rating, setRating] = useState(0);
-  const [notes, setNotes] = useState('');
-  const [episodesWatched, setEpisodesWatched] = useState(0);
-  const [episodesTotal, setEpisodesTotal] = useState(10);
-  const [seasonsWatched, setSeasonsWatched] = useState(1);
-  const [percentage, setPercentage] = useState(0);
-  const [tagsInput, setTagsInput] = useState('');
+  const [status, setStatus] = useState<'watchlist' | 'watching' | 'watched'>(item?.status || 'watchlist');
+  const [rating, setRating] = useState(item?.rating || 0);
+  const [notes, setNotes] = useState(item?.notes || '');
+  const [episodesWatched, setEpisodesWatched] = useState(item?.progress?.episodesWatched || 0);
+  const [episodesTotal, setEpisodesTotal] = useState(item?.progress?.episodesTotal || 10);
+  const [seasonsWatched, setSeasonsWatched] = useState(item?.progress?.seasonsWatched || 1);
+  const [percentage, setPercentage] = useState(item?.progress?.percentage || 0);
+  const [tagsInput, setTagsInput] = useState(item?.customTags?.join(', ') || '');
+  const [prevItem, setPrevItem] = useState(item);
 
-  // Sync state with open item
-  useEffect(() => {
+  if (item !== prevItem) {
+    setPrevItem(item);
     if (item) {
       setStatus(item.status);
       setRating(item.rating);
@@ -50,7 +51,7 @@ export function MovieDialog({ item, isOpen, onClose, onUpdate, onRemove }: Movie
         setPercentage(item.progress?.percentage || 0);
       }
     }
-  }, [item, isOpen]);
+  }
 
   if (!item) return null;
 

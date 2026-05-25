@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -6,8 +8,9 @@ import { useMovies } from '@/hooks/use-movies';
 import { MovieCard } from '@/components/movie-card';
 import { MovieDialog } from '@/components/movie-dialog';
 import { AnalyticsDashboard } from '@/components/analytics-dashboard';
+import { AddToWatchlistDialog } from '@/components/add-to-watchlist-dialog';
 import { SettingsPanel } from '@/components/settings-panel';
-import { Movie, TrackedItem, DISCOVER_CATEGORIES } from '@/lib/movie-db';
+import { Movie, TrackedItem, DISCOVER_CATEGORIES, MOCK_MOVIES } from '@/lib/movie-db';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
@@ -40,6 +43,7 @@ function CategoryRow({
   trackedItems,
   onAdd,
   onEdit,
+  onAddToWatchlist,
   subtitle,
   onMore,
 }: {
@@ -48,6 +52,7 @@ function CategoryRow({
   trackedItems: TrackedItem[];
   onAdd?: (movie: Movie, status: 'watchlist' | 'watching' | 'watched') => void;
   onEdit?: (item: TrackedItem) => void;
+  onAddToWatchlist?: (movie: Movie) => void;
   subtitle?: string;
   onMore?: () => void;
 }) {
@@ -120,6 +125,7 @@ function CategoryRow({
                 item={trackedItems.find((i) => i.id === movie.id)}
                 onAdd={onAdd}
                 onEdit={onEdit}
+                onAddToWatchlist={onAddToWatchlist}
               />
             </div>
           ))}
@@ -151,8 +157,14 @@ export default function Home() {
     stats,
   } = useMovies();
 
-  // Navigation tab state
   const [activeTab, setActiveTab] = useState<'library' | 'discover' | 'analytics' | 'settings'>('library');
+  const [watchlistDialogOpen, setWatchlistDialogOpen] = useState<boolean>(false);
+  const [selectedMovieForWatchlist, setSelectedMovieForWatchlist] = useState<Movie | null>(null);
+
+  const openWatchlistDialog = (movie: Movie) => {
+    setSelectedMovieForWatchlist(movie);
+    setWatchlistDialogOpen(true);
+  };
 
   // Dialog state
   const [editingItem, setEditingItem] = useState<TrackedItem | null>(null);
@@ -431,6 +443,7 @@ export default function Home() {
                     key={item.id}
                     item={item}
                     onEdit={handleEditClick}
+                    onAddToWatchlist={openWatchlistDialog}
                   />
                 ))}
               </div>
@@ -516,10 +529,10 @@ export default function Home() {
                     <MovieCard
                       key={movie.id}
                       movie={movie}
-                      // Check if already in library
                       item={trackedItems.find((i) => i.id === movie.id)}
                       onAdd={addMovie}
                       onEdit={handleEditClick}
+                      onAddToWatchlist={openWatchlistDialog}
                     />
                   ))}
                 </div>
@@ -548,15 +561,17 @@ export default function Home() {
                     trackedItems={trackedItems}
                     onAdd={addMovie}
                     onEdit={handleEditClick}
+                    onAddToWatchlist={openWatchlistDialog}
                   />
                 ) : (
                   <CategoryRow
                     title="Suggested Titles"
                     subtitle="Offline Mode"
-                    movies={require('@/lib/movie-db').MOCK_MOVIES.slice(0, 10)}
+                    movies={MOCK_MOVIES.slice(0, 10)}
                     trackedItems={trackedItems}
                     onAdd={addMovie}
                     onEdit={handleEditClick}
+                    onAddToWatchlist={openWatchlistDialog}
                   />
                 )}
 
@@ -564,7 +579,7 @@ export default function Home() {
                 {DISCOVER_CATEGORIES.map((cat) => {
                   const movies = apiSettings.tmdbApiKey
                     ? (categoryMovies[cat.id] || [])
-                    : require('@/lib/movie-db').MOCK_MOVIES.filter((movie: Movie) =>
+                    : MOCK_MOVIES.filter((movie: Movie) =>
                         movie.genre.includes(cat.mockName)
                       );
 
@@ -577,6 +592,7 @@ export default function Home() {
                       trackedItems={trackedItems}
                       onAdd={addMovie}
                       onEdit={handleEditClick}
+                      onAddToWatchlist={openWatchlistDialog}
                       onMore={() => router.push(`/category/${cat.id}`)}
                     />
                   );
@@ -625,6 +641,11 @@ export default function Home() {
         }}
         onUpdate={updateTrackedItem}
         onRemove={removeMovie}
+      />
+      <AddToWatchlistDialog
+        isOpen={watchlistDialogOpen}
+        onClose={() => setWatchlistDialogOpen(false)}
+        movie={selectedMovieForWatchlist}
       />
     </div>
   );

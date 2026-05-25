@@ -1,7 +1,8 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Movie, TrackedItem, ApiSettings, MOCK_MOVIES, searchOmdb, searchTmdb, getTrendingTmdb, DISCOVER_CATEGORIES, getMoviesByGenreTmdb } from '@/lib/movie-db';
+import { Movie, TrackedItem, ApiSettings, MOCK_MOVIES, searchOmdb, searchTmdb, getTrendingTmdb, DISCOVER_CATEGORIES, getMoviesByGenreTmdb, WatchlistCollection } from '@/lib/movie-db';
 import { toast } from 'sonner';
 
 export function useMovies() {
@@ -101,7 +102,71 @@ export function useMovies() {
   }, [apiSettings.tmdbApiKey, mounted, fetchTrending, fetchCategories]);
 
   // Add a movie to tracker
-  const addMovie = useCallback((movie: Movie, status: 'watchlist' | 'watching' | 'watched') => {
+  const [collections, setCollections] = useState<WatchlistCollection[]>([]);
+
+  // Load collections from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('watchlist_collections');
+      if (stored) {
+        try {
+          setCollections(JSON.parse(stored));
+        } catch (e) {
+          console.error('Failed to parse collections', e);
+        }
+      } else {
+        // Seed default collection
+        const defaultCol: WatchlistCollection = {
+          id: 'default',
+          name: 'Default',
+          color: '#6366f1',
+          createdAt: new Date().toISOString()
+        };
+        setCollections([defaultCol]);
+        localStorage.setItem('watchlist_collections', JSON.stringify([defaultCol]));
+      }
+    }
+  }, []);
+
+  // Helper to persist collections
+  const persistCollections = (cols: WatchlistCollection[]) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('watchlist_collections', JSON.stringify(cols));
+    }
+  };
+
+  const addCollection = (name: string, color: string, description?: string) => {
+    const newCol: WatchlistCollection = {
+      id: crypto.randomUUID?.() ?? Math.random().toString(36).slice(2),
+      name,
+      color,
+      description,
+      createdAt: new Date().toISOString()
+    };
+    const updated = [...collections, newCol];
+    setCollections(updated);
+    persistCollections(updated);
+    return newCol;
+  };
+
+  const updateCollection = (id: string, updates: Partial<WatchlistCollection>) => {
+    const updated = collections.map(col => (col.id === id ? { ...col, ...updates } : col));
+    setCollections(updated);
+    persistCollections(updated);
+  };
+
+  const deleteCollection = (id: string) => {
+    // Move items to default collection
+    const defaultId = 'default';
+    const updatedItems = trackedItems.map(item => (item.collectionId === id ? { ...item, collectionId: defaultId } : item));
+    saveTrackedItems(updatedItems);
+    const filtered = collections.filter(col => col.id !== id);
+    setCollections(filtered);
+    persistCollections(filtered);
+  };
+
+  // Modified addMovie to accept optional collectionId (default to "default")
+  const addMovie = useCallback((movie: Movie, status: 'watchlist' | 'watching' | 'watched', collectionId?: string) => {
     const existing = trackedItems.find((item) => item.id === movie.id);
     if (existing) {
       toast.error(`"${movie.title}" is already in your tracker!`);
@@ -124,13 +189,15 @@ export function useMovies() {
         seasonsWatched: 0
       } : {
         percentage: 0
-      }
+      },
+      collectionId: collectionId ?? 'default'
     };
 
     const updated = [newItem, ...trackedItems];
     saveTrackedItems(updated);
     toast.success(`Added "${movie.title}" to ${status === 'watching' ? 'Currently Watching' : status}.`);
-  }, [trackedItems]);
+  }, [trackedItems, collections]);
+
 
   // Update a tracked item's details
   const updateTrackedItem = useCallback((id: string, updates: Partial<TrackedItem>) => {
@@ -298,6 +365,10 @@ export function useMovies() {
     searchMovies,
     importLibrary,
     clearDatabase,
+    collections,
+    addCollection,
+    updateCollection,
+    deleteCollection,
     stats
   };
 }

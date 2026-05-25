@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -30,6 +32,31 @@ interface AnalyticsProps {
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
 
+// Custom tooltips for Recharts to maintain minimalist theme
+const CustomBarTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-lg shadow-xl text-xs">
+        <p className="font-semibold text-zinc-300">{payload[0].payload.name}</p>
+        <p className="text-indigo-400 mt-0.5">Watched: {payload[0].value} movies</p>
+      </div>
+    );
+  }
+  return null;
+};
+
+const CustomPieTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-lg shadow-xl text-xs">
+        <p className="font-semibold text-zinc-300">{payload[0].name}</p>
+        <p className="text-emerald-400 mt-0.5">Count: {payload[0].value} titles</p>
+      </div>
+    );
+  }
+  return null;
+};
+
 export function AnalyticsDashboard({ stats }: AnalyticsProps) {
   const [isClient, setIsClient] = useState(false);
 
@@ -44,31 +71,6 @@ export function AnalyticsDashboard({ stats }: AnalyticsProps) {
       </div>
     );
   }
-
-  // Custom tooltips for Recharts to maintain minimalist theme
-  const CustomBarTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-lg shadow-xl text-xs">
-          <p className="font-semibold text-zinc-300">{payload[0].payload.name}</p>
-          <p className="text-indigo-400 mt-0.5">Watched: {payload[0].value} movies</p>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const CustomPieTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-lg shadow-xl text-xs">
-          <p className="font-semibold text-zinc-300">{payload[0].name}</p>
-          <p className="text-emerald-400 mt-0.5">Count: {payload[0].value} titles</p>
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <div className="space-y-6">

@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useMovies } from '@/hooks/use-movies';
 import { MovieCard } from '@/components/movie-card';
 import { MovieDialog } from '@/components/movie-dialog';
-import { Movie, TrackedItem, DISCOVER_CATEGORIES, getMoviesByGenreTmdbPaginated } from '@/lib/movie-db';
+import { Movie, TrackedItem, DISCOVER_CATEGORIES, getMoviesByGenreTmdbPaginated, MOCK_MOVIES } from '@/lib/movie-db';
 import { motion } from 'framer-motion';
 import {
   Film,
@@ -61,8 +61,7 @@ export default function CategoryPage() {
         setTotalPages(result.totalPages);
       } else {
         // Offline / fallback mode: paginate local MOCK_MOVIES
-        const requireRes = require('@/lib/movie-db');
-        const offlineAllMovies = requireRes.MOCK_MOVIES.filter((movie: Movie) =>
+        const offlineAllMovies = MOCK_MOVIES.filter((movie: Movie) =>
           movie.genre.includes(category.mockName)
         );
         const pageSize = 4; // Small page size for mock data to demonstrate pagination

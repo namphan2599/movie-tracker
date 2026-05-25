@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface Movie {
   id: string;
   title: string;
@@ -11,6 +12,15 @@ export interface Movie {
   released?: string;
   runtime?: string;
   actors?: string;
+}
+
+export interface WatchlistCollection {
+  id: string;           // uuid
+  name: string;
+  description?: string;
+  color: string;        // accent color token (e.g. "#6366f1")
+  createdAt: string;    // ISO date
+  coverMovieId?: string; // first movie poster shown as cover
 }
 
 export interface TrackedItem {
@@ -28,6 +38,7 @@ export interface TrackedItem {
     seasonsWatched?: number;
     percentage?: number; // for movies
   };
+  collectionId?: string; // optional collection reference, defaults to "default"
   customTags: string[];
 }
 
@@ -467,6 +478,174 @@ export async function getMoviesByGenreTmdbPaginated(
   } catch (error) {
     console.error(`TMDB Genre ${genreId} Paginated API Error:`, error);
     return { movies: [], totalPages: 1 };
+  }
+}
+
+export interface CastMember {
+  name: string;
+  character: string;
+  profileUrl?: string;
+}
+
+export interface CommunityReview {
+  id: string;
+  author: string;
+  rating: number; // out of 10
+  content: string;
+  date: string;
+}
+
+export interface MovieDetailedInfo {
+  movie: Movie;
+  backdropUrl?: string;
+  cast: CastMember[];
+  trailerKey?: string;
+  reviews: CommunityReview[];
+}
+
+export async function getMovieDetailsTmdb(
+  id: string,
+  type: 'movie' | 'series',
+  apiKey: string
+): Promise<MovieDetailedInfo | null> {
+  const tmdbId = id.replace('tmdb-', '');
+  const isTv = type === 'series';
+  const baseUrl = `https://api.themoviedb.org/3/${isTv ? 'tv' : 'movie'}/${tmdbId}`;
+
+  try {
+    // 1. Fetch details
+    const detailRes = await fetch(`${baseUrl}?api_key=${apiKey}`);
+    if (!detailRes.ok) return null;
+    const detailData = await detailRes.json();
+
+    // 2. Fetch credits
+    const creditsRes = await fetch(`${baseUrl}/credits?api_key=${apiKey}`);
+    const creditsData = creditsRes.ok ? await creditsRes.json() : { cast: [], crew: [] };
+
+    // 3. Fetch videos
+    const videosRes = await fetch(`${baseUrl}/videos?api_key=${apiKey}`);
+    const videosData = videosRes.ok ? await videosRes.json() : { results: [] };
+
+    // 4. Fetch reviews
+    const reviewsRes = await fetch(`${baseUrl}/reviews?api_key=${apiKey}`);
+    const reviewsData = reviewsRes.ok ? await reviewsRes.json() : { results: [] };
+
+    const isTvShow = isTv;
+    const title = detailData.title || detailData.name;
+    const year = (detailData.release_date || detailData.first_air_date || '').split('-')[0] || 'N/A';
+    const poster = detailData.poster_path
+      ? `https://image.tmdb.org/t/p/w500${detailData.poster_path}`
+      : 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=500&auto=format&fit=crop';
+    const backdropUrl = detailData.backdrop_path
+      ? `https://image.tmdb.org/t/p/original${detailData.backdrop_path}`
+      : undefined;
+
+    const genres = (detailData.genres || []).map((g: any) => g.name);
+
+    let director = 'Unknown';
+    if (creditsData.crew) {
+      const dirObj = creditsData.crew.find((member: any) => member.job === 'Director');
+      if (dirObj) director = dirObj.name;
+    }
+
+    const cast: CastMember[] = (creditsData.cast || []).slice(0, 10).map((c: any) => ({
+      name: c.name,
+      character: c.character,
+      profileUrl: c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : undefined,
+    }));
+
+    const actorsSummary = cast.map((c) => c.name).slice(0, 4).join(', ') || 'Various Actors';
+
+    const movie: Movie = {
+      id,
+      title,
+      type,
+      year,
+      poster,
+      genre: genres,
+      director,
+      plot: detailData.overview || 'No plot details available.',
+      imdbRating: detailData.vote_average ? detailData.vote_average.toFixed(1) : 'N/A',
+      released: detailData.release_date || detailData.first_air_date,
+      runtime: isTvShow
+        ? (detailData.episode_run_time && detailData.episode_run_time.length > 0
+            ? `${detailData.episode_run_time[0]} min per episode`
+            : '45 min per episode')
+        : (detailData.runtime ? `${detailData.runtime} min` : 'N/A'),
+      actors: actorsSummary,
+    };
+
+    let trailerKey: string | undefined = undefined;
+    if (videosData.results) {
+      const trailer = videosData.results.find(
+        (v: any) => (v.type === 'Trailer' || v.type === 'Teaser') && v.site === 'YouTube'
+      );
+      if (trailer) {
+        trailerKey = trailer.key;
+      }
+    }
+
+    const reviews: CommunityReview[] = (reviewsData.results || []).slice(0, 5).map((r: any) => ({
+      id: r.id,
+      author: r.author,
+      rating: r.author_details?.rating || 0,
+      content: r.content,
+      date: (r.created_at || '').split('T')[0],
+    }));
+
+    return {
+      movie,
+      backdropUrl,
+      cast,
+      trailerKey,
+      reviews,
+    };
+  } catch (error) {
+    console.error("TMDB Details API Error:", error);
+    return null;
+  }
+}
+
+export async function getMovieDetailsOmdb(
+  id: string,
+  apiKey: string
+): Promise<MovieDetailedInfo | null> {
+  try {
+    const detailRes = await fetch(`https://www.omdbapi.com/?apikey=${apiKey}&i=${id}&plot=full`);
+    if (!detailRes.ok) return null;
+    const detailData = await detailRes.json();
+    if (detailData.Response !== "True") return null;
+
+    const movie: Movie = {
+      id,
+      title: detailData.Title,
+      type: detailData.Type === 'series' ? 'series' : 'movie',
+      year: detailData.Year,
+      poster: (detailData.Poster && detailData.Poster !== 'N/A')
+        ? detailData.Poster
+        : 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=500&auto=format&fit=crop',
+      genre: detailData.Genre ? detailData.Genre.split(', ').map((g: string) => g.trim()) : [],
+      director: detailData.Director || 'Unknown',
+      actors: detailData.Actors || 'Unknown',
+      imdbRating: detailData.imdbRating || 'N/A',
+      released: detailData.Released,
+      runtime: detailData.Runtime,
+      plot: detailData.Plot || 'No plot details available.',
+    };
+
+    const cast: CastMember[] = (detailData.Actors || '').split(', ').map((name: string) => ({
+      name: name.trim(),
+      character: 'Cast',
+    })).filter((c: any) => c.name.length > 0);
+
+    return {
+      movie,
+      cast,
+      reviews: [],
+    };
+  } catch (error) {
+    console.error("OMDB Details API Error:", error);
+    return null;
   }
 }
 
